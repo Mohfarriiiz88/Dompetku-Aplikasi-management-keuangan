@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../routes/app_routes.dart';
-import '../core/theme/theme.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/custom_button.dart';
+
+// ✔ gunakan package import, bukan relatif ../
+import 'package:smartbudget/routes/app_routes.dart';
+import 'package:smartbudget/core/theme/theme.dart';
+import 'package:smartbudget/providers/auth_provider.dart';
+import 'package:smartbudget/widgets/custom_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,17 +28,23 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+
     final ok = await context.read<AuthProvider>().login(
       email: emailC.text.trim(),
       password: passC.text,
     );
+
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? 'Dummy login success' : 'Gagal'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+
+    if (ok) {
+      // clear stack -> pindah ke Home
+      Navigator.of(context)
+          .pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal login')),
+      );
+    }
   }
 
   @override
@@ -52,20 +60,15 @@ class _LoginScreenState extends State<LoginScreen> {
           return Scaffold(
             body: Stack(
               children: [
-                // BACKGROUND: gradient brand
-                Container(
-                  decoration: const BoxDecoration(gradient: AppGradients.brand),
-                ),
-                // BG CIRCLE dari aset
-                // ===== BACKGROUND: gradient + bgcircle.png via DecorationImage =====
+                // BACKGROUND: gradient + bgcircle (DecorationImage)
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
-                      gradient: AppGradients.brand, // #0E0B28 -> #282180
+                      gradient: AppGradients.brand,
                       image: DecorationImage(
                         image: AssetImage('assets/images/bgcircle.png'),
                         fit: BoxFit.cover,
-                        opacity: 0.25, // ripple tipis
+                        opacity: 0.25,
                         filterQuality: FilterQuality.low,
                       ),
                     ),
@@ -98,7 +101,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // Panel (tinggi menyesuaikan konten)
                       Container(
                         width: w,
                         padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
@@ -144,8 +146,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 validator: (v) =>
                                     (v == null || v.trim().isEmpty)
-                                    ? 'E-mail wajib diisi'
-                                    : null,
+                                        ? 'E-mail wajib diisi'
+                                        : null,
                               ),
                               const SizedBox(height: 14),
 
@@ -191,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 10),
 
-                              // Tombol Masuk (dummy)
+                              // Tombol Masuk
                               CustomButton(
                                 label: 'Masuk',
                                 loading: auth.loading,
@@ -207,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      // Ilustrasi koin dari aset, “melayang” di atas panel
+                      // Ilustrasi koin
                       Positioned(
                         top: -120,
                         left: 20,
@@ -224,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                      // FAB kuning (ikon panah kanan) panggil dummy login juga
+                      // FAB panah -> ke register
                       Positioned(
                         top: -24,
                         right: 24,

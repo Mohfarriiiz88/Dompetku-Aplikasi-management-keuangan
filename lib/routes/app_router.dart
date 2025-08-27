@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smartbudget/screens/home_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/register_screen.dart';
 import 'app_routes.dart';
@@ -12,6 +13,8 @@ class AppRouter {
         return _fade(const LoginScreen(), settings);
       case AppRoutes.register:
         return _fade(const RegisterScreen(), settings);
+      case AppRoutes.home:
+        return _fade(const HomeScreen(), settings);
 
       default:
         // fallback sederhana
