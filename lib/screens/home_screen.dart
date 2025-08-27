@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../core/theme/theme.dart';
 import '../providers/home_provider.dart';
 import '../widgets/floating_navbar.dart';
+import '../widgets/white_blur_card.dart';
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -13,7 +15,6 @@ class HomeScreen extends StatelessWidget {
     // precache agar mulus
     WidgetsBinding.instance.addPostFrameCallback((_) {
       precacheImage(const AssetImage('assets/images/bgcircle.png'), context);
-      precacheImage(const AssetImage('assets/images/liquidglass.png'), context);
     });
 
     return ChangeNotifierProvider(
@@ -141,37 +142,40 @@ class _WalletCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 120,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/liquidglass.png'),
-          fit: BoxFit.cover,
+Widget build(BuildContext context) {
+  return WhiteBlurCard(
+    height: 120,
+    width: double.infinity,
+    radius: 24,
+    padding: const EdgeInsets.all(20),
+    // bisa di-tweak: blurSigma: 20, opacity: .9,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Isi Dompetmu',
+          style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                color: Colors.white.withOpacity(.6),
+                fontWeight: FontWeight.w600,
+              ),
+          textAlign: TextAlign.center,
         ),
-      ),  
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Isi Dompetmu',
-                style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                      color: Colors.white.withOpacity(.85),
-                      fontWeight: FontWeight.w600,
-                    )),
-            const SizedBox(height: 6),
-            Text(_rp(balance <= 0 ? 1000000 : balance),
-                style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
-          ],
+        const SizedBox(height: 6),
+        Text(
+          _rp(balance <= 0 ? 1000000 : balance),
+          style: const TextStyle(
+            color: Colors.white,            // karena kartu putih
+            fontSize: 26,
+            fontWeight: FontWeight.w800,
+          ),
+          textAlign: TextAlign.center,
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
-
+}
 /// ================= QUICK ACTIONS =================
 class _QuickActions extends StatelessWidget {
   const _QuickActions();
@@ -198,8 +202,8 @@ class _QuickActions extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        item(Icons.trending_up, 'Pemasukan'),
-        item(Icons.trending_down, 'Pengeluaran'),
+        item(Icons.trending_up, 'Uang\nMasuk'),
+        item(Icons.trending_down, 'Uang\nKeluar'),
         item(Icons.print_rounded, 'Cetak'),
         item(Icons.bar_chart, 'Statistik'),
       ],

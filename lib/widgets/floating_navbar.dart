@@ -24,8 +24,8 @@ class AppFloatingNavBar extends StatelessWidget {
     ];
 
     return Positioned(
-      left: 20,
-      right: 20,
+      left: 80,
+      right: 80,
       bottom: 20 + MediaQuery.of(context).padding.bottom,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
