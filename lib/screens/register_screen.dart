@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../routes/app_routes.dart';
-import '../core/theme/theme.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/custom_button.dart';
+
+import 'package:smartbudget/routes/app_routes.dart';
+import 'package:smartbudget/core/theme/theme.dart';
+import 'package:smartbudget/providers/auth_provider.dart';
+import 'package:smartbudget/widgets/custom_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,21 +27,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _submit() async {
-    // dummy register
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     final ok = await context.read<AuthProvider>().register(
-      username: usernameC.text.trim(),
-      email: emailC.text.trim(),
-      password: passC.text,
-    );
+          username: usernameC.text.trim(),
+          email: emailC.text.trim(),
+          password: passC.text,
+        );
+
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(ok ? 'Dummy register success' : 'Gagal mendaftar'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Dummy register success' : 'Gagal mendaftar'),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
@@ -51,12 +51,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: LayoutBuilder(
         builder: (context, c) {
-          final w = c.maxWidth;
+          final h = c.maxHeight;
+          final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+
+          // Relatif & adaptif (sama seperti login)
+          double panelTopFactor = 0.42;
+          if (h < 700) panelTopFactor -= 0.05;
+          if (viewInsets > 0) panelTopFactor -= 0.10;
+          panelTopFactor = panelTopFactor.clamp(0.25, 0.55);
 
           return Scaffold(
             body: Stack(
               children: [
-                // BACKGROUND: gradient + bgcircle (DecorationImage)
+                // Background
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -64,14 +71,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       image: DecorationImage(
                         image: AssetImage('assets/images/bgcircle.png'),
                         fit: BoxFit.cover,
-                        opacity: 0.25,
+                        opacity: .25,
                         filterQuality: FilterQuality.low,
                       ),
                     ),
                   ),
                 ),
 
-                // Brand “Dompetku” atas
+                // Brand
                 SafeArea(
                   child: Align(
                     alignment: Alignment.topCenter,
@@ -89,142 +96,165 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                // PANEL FORM full kiri–kanan–bawah
-                Positioned(
+                // Panel form (relatif & anti-overflow)
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
                   left: 0,
                   right: 0,
                   bottom: 0,
+                  top: h * panelTopFactor,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Container(
-                        width: w,
-                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-                        decoration: BoxDecoration(
-                          color: AppColors.greySurface,
-                          borderRadius: AppRadius.sheet,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(.15),
-                              blurRadius: 18,
-                              offset: const Offset(0, -6),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Daftar',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              const Text(
-                                'Username',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: usernameC,
-                                decoration: const InputDecoration(
-                                  hintText: 'Username',
-                                ),
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Username wajib diisi'
-                                    : null,
-                              ),
-                              const SizedBox(height: 14),
-
-                              const Text(
-                                'E-mail',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: emailC,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: const InputDecoration(
-                                  hintText: 'E-Mail',
-                                ),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty)
-                                    return 'E-Mail wajib diisi';
-                                  final ok = RegExp(
-                                    r'^[^@]+@[^@]+\.[^@]+',
-                                  ).hasMatch(v.trim());
-                                  return ok
-                                      ? null
-                                      : 'Format e-mail tidak valid';
-                                },
-                              ),
-                              const SizedBox(height: 14),
-
-                              const Text(
-                                'Kata sandi',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: passC,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  hintText: 'Kata sandi',
-                                ),
-                                validator: (v) => (v == null || v.length < 6)
-                                    ? 'Minimal 6 karakter'
-                                    : null,
-                              ),
-
-                              const SizedBox(height: 16),
-                              CustomButton(
-                                label: 'Daftar',
-                                loading: auth.loading,
-                                onPressed: auth.loading ? null : _submit,
-                              ),
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).padding.bottom + 4,
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.greySurface,
+                            borderRadius: AppRadius.sheet,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(.15),
+                                blurRadius: 18,
+                                offset: const Offset(0, -6),
                               ),
                             ],
                           ),
+                          child: LayoutBuilder(
+                            builder: (ctx, cons) {
+                              return SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  20,
+                                  28,
+                                  20,
+                                  24 + MediaQuery.of(context).padding.bottom,
+                                ),
+                                child: ConstrainedBox(
+                                  constraints:
+                                      BoxConstraints(minHeight: cons.maxHeight),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Daftar',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+
+                                        const Text(
+                                          'Username',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: usernameC,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Username',
+                                          ),
+                                          validator: (v) => (v == null ||
+                                                  v.trim().isEmpty)
+                                              ? 'Username wajib diisi'
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 14),
+
+                                        const Text(
+                                          'E-mail',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: emailC,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          decoration: const InputDecoration(
+                                            hintText: 'E-Mail',
+                                          ),
+                                          validator: (v) {
+                                            if (v == null ||
+                                                v.trim().isEmpty) {
+                                              return 'E-Mail wajib diisi';
+                                            }
+                                            final ok = RegExp(
+                                                    r'^[^@]+@[^@]+\.[^@]+$')
+                                                .hasMatch(v.trim());
+                                            return ok
+                                                ? null
+                                                : 'Format e-mail tidak valid';
+                                          },
+                                        ),
+                                        const SizedBox(height: 14),
+
+                                        const Text(
+                                          'Kata sandi',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: passC,
+                                          obscureText: true,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Kata sandi',
+                                          ),
+                                          validator: (v) => (v == null ||
+                                                  v.length < 6)
+                                              ? 'Minimal 6 karakter'
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 40),
+
+                                        CustomButton(
+                                          label: 'Daftar',
+                                          loading: auth.loading,
+                                          onPressed:
+                                              auth.loading ? null : _submit,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
 
-                      // Ilustrasi koin (DecorationImage) melayang
+                      // Koin
                       Positioned(
                         top: -120,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 180,
                           height: 180,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('assets/images/koin.png'),
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
+                          child: const DecoratedBox(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage('assets/images/koin.png'),
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                      // FAB kuning — balik ke Login
+                      // FAB -> Login
                       Positioned(
                         top: -24,
                         right: 24,

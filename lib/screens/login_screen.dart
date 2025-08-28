@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// ✔ gunakan package import, bukan relatif ../
 import 'package:smartbudget/routes/app_routes.dart';
 import 'package:smartbudget/core/theme/theme.dart';
 import 'package:smartbudget/providers/auth_provider.dart';
@@ -30,14 +29,13 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusScope.of(context).unfocus();
 
     final ok = await context.read<AuthProvider>().login(
-      email: emailC.text.trim(),
-      password: passC.text,
-    );
+          email: emailC.text.trim(),
+          password: passC.text,
+        );
 
     if (!mounted) return;
 
     if (ok) {
-      // clear stack -> pindah ke Home
       Navigator.of(context)
           .pushNamedAndRemoveUntil(AppRoutes.home, (route) => false);
     } else {
@@ -55,12 +53,19 @@ class _LoginScreenState extends State<LoginScreen> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: LayoutBuilder(
         builder: (context, c) {
-          final w = c.maxWidth;
+          final h = c.maxHeight;
+          final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+
+          // ===== Tinggi panel RELATIF & adaptif =====
+          double panelTopFactor = 0.42;         // baseline
+          if (h < 700) panelTopFactor -= 0.05;  // layar kecil -> panel lebih tinggi
+          if (viewInsets > 0) panelTopFactor -= 0.10; // saat keyboard muncul
+          panelTopFactor = panelTopFactor.clamp(0.25, 0.55);
 
           return Scaffold(
             body: Stack(
               children: [
-                // BACKGROUND: gradient + bgcircle (DecorationImage)
+                // BACKGROUND
                 Positioned.fill(
                   child: Container(
                     decoration: const BoxDecoration(
@@ -75,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // Brand text di bagian atas
+                // BRAND
                 SafeArea(
                   child: Align(
                     alignment: Alignment.topCenter,
@@ -93,140 +98,162 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                // PANEL FORM full kiri–kanan–bawah
-                Positioned(
+                // ===== PANEL FORM: full kiri–kanan–bawah, responsif =====
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOut,
                   left: 0,
                   right: 0,
                   bottom: 0,
+                  top: h * panelTopFactor,
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Container(
-                        width: w,
-                        padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-                        decoration: BoxDecoration(
-                          color: AppColors.greySurface,
-                          borderRadius: AppRadius.sheet,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(.15),
-                              blurRadius: 18,
-                              offset: const Offset(0, -6),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text(
-                                'Masuk',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              const Text(
-                                'E-mail',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: emailC,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: const InputDecoration(
-                                  hintText: 'E-mail',
-                                ),
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                        ? 'E-mail wajib diisi'
-                                        : null,
-                              ),
-                              const SizedBox(height: 14),
-
-                              const Text(
-                                'Kata sandi',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              TextFormField(
-                                controller: passC,
-                                obscureText: true,
-                                decoration: const InputDecoration(
-                                  hintText: 'Kata sandi',
-                                ),
-                                validator: (v) => (v == null || v.length < 6)
-                                    ? 'Minimal 6 karakter'
-                                    : null,
-                              ),
-                              const SizedBox(height: 10),
-
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {},
-                                  style: TextButton.styleFrom(
-                                    padding: EdgeInsets.zero,
-                                    minimumSize: Size.zero,
-                                    tapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                  ),
-                                  child: const Text(
-                                    'Lupa kata sandi?',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-
-                              // Tombol Masuk
-                              CustomButton(
-                                label: 'Masuk',
-                                loading: auth.loading,
-                                onPressed: auth.loading ? null : _submit,
-                              ),
-
-                              SizedBox(
-                                height:
-                                    MediaQuery.of(context).padding.bottom + 4,
+                      // panel isi seluruh area
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.greySurface,
+                            borderRadius: AppRadius.sheet,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(.15),
+                                blurRadius: 18,
+                                offset: const Offset(0, -6),
                               ),
                             ],
                           ),
+                          // ==== Konten anti-overflow ====
+                          child: LayoutBuilder(
+                            builder: (ctx, cons) {
+                              return SingleChildScrollView(
+                                physics: const ClampingScrollPhysics(),
+                                padding: EdgeInsets.fromLTRB(
+                                  20,
+                                  28,
+                                  20,
+                                  24 + MediaQuery.of(context).padding.bottom,
+                                ),
+                                child: ConstrainedBox(
+                                  constraints:
+                                      BoxConstraints(minHeight: cons.maxHeight),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        const Text(
+                                          'Masuk',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+
+                                        const Text(
+                                          'E-mail',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: emailC,
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          decoration: const InputDecoration(
+                                            hintText: 'E-mail',
+                                          ),
+                                          validator: (v) => (v == null ||
+                                                  v.trim().isEmpty)
+                                              ? 'E-mail wajib diisi'
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 14),
+
+                                        const Text(
+                                          'Kata sandi',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: passC,
+                                          obscureText: true,
+                                          decoration: const InputDecoration(
+                                            hintText: 'Kata sandi',
+                                          ),
+                                          validator: (v) => (v == null ||
+                                                  v.length < 6)
+                                              ? 'Minimal 6 karakter'
+                                              : null,
+                                        ),
+                                        const SizedBox(height: 20),
+
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: () {},
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            child: const Text(
+                                              'Lupa kata sandi?',
+                                              style: TextStyle(
+                                                color: Colors.black,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 30),
+
+                                        CustomButton(
+                                          label: 'Masuk',
+                                          loading: auth.loading,
+                                          onPressed:
+                                              auth.loading ? null : _submit,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
 
-                      // Ilustrasi koin
+                      // KOIN
                       Positioned(
                         top: -120,
                         left: 20,
-                        child: Container(
+                        child: SizedBox(
                           width: 180,
                           height: 180,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage('assets/images/koin.png'),
-                              fit: BoxFit.contain,
-                              filterQuality: FilterQuality.high,
+                          child: const DecoratedBox(
+                            decoration: BoxDecoration(
+                              image: DecorationImage(
+                                image: AssetImage('assets/images/koin.png'),
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.high,
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                      // FAB panah -> ke register
+                      // FAB → Register
                       Positioned(
                         top: -24,
                         right: 24,
