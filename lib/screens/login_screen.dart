@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:smartbudget/routes/app_routes.dart';
 import 'package:smartbudget/core/theme/theme.dart';
 import 'package:smartbudget/providers/auth_provider.dart';
@@ -279,3 +278,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+  

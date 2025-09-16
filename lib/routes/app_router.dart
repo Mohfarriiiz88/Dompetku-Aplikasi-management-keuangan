@@ -15,6 +15,7 @@ class AppRouter {
         return _fade(const RegisterScreen(), settings);
       case AppRoutes.home:
         return _fade(const HomeScreen(), settings);
+      
 
       default:
         // fallback sederhana
