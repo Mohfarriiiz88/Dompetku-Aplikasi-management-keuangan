@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import '../screens/friend_list_screen.dart';
+import '../screens/transaction_form_screen.dart';
 import '../core/theme/theme.dart';
 import '../providers/home_provider.dart';
 import '../widgets/floating_navbar.dart';
@@ -87,9 +88,9 @@ class _DraggableFeedSheet extends StatelessWidget {
     const double navBarReserve = 96;
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.58, // start posisi (≈ 58% tinggi layar)
+      initialChildSize: 0.58, // start posisi (≈ 58% tinggi layar)//
       minChildSize: 0.45,     // bisa diturunkan sampai sini
-      maxChildSize: 1,     // bisa ditarik hampir penuh
+      maxChildSize: 0.95,     // bisa ditarik hampir penuh
       snap: true,
       snapSizes: const [0.58, 0.95],
       builder: (context, scrollController) {
@@ -250,39 +251,96 @@ class _QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget item(IconData icon, String label) => Column(
-          children: [
-            Container(
-              height: 56,
-              width: 56,
+    // builder untuk satu tombol (ikon bulat + label di bawah)
+    Widget action({
+      required IconData icon,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkResponse(
+            onTap: onTap,
+            radius: 40,
+            child: Container(
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(.08),
-                    blurRadius: 8,
+                    blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: Icon(icon, color: AppColors.purple),
+              child: Icon(icon, color: AppColors.purple, size: 28),
             ),
-            const SizedBox(height: 6),
-            Text(label,
-                textAlign: TextAlign.center,
-                style:
-                    const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          ],
-        );
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              height: 1.1,
+            ),
+          ),
+        ],
+      );
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        item(Icons.trending_up, 'Uang\nMasuk'),
-        item(Icons.trending_down, 'Uang\nKeluar'),
-        item(Icons.print_rounded, 'Cetak'),
-        item(Icons.bar_chart, 'Statistik'),
+        // Catat Keuangan -> buka form
+        action(
+          icon: Icons.request_quote_rounded,
+          label: 'Catat\nKeuangan',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TransactionFormScreen()),
+            );
+          },
+        ),
+
+        // Cetak (dummy)
+        action(
+          icon: Icons.print_rounded,
+          label: 'Cetak',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Fitur Cetak (coming soon)')),
+            );
+          },
+        ),
+
+        // Statistik (dummy)
+        action(
+          icon: Icons.bar_chart_rounded,
+          label: 'Statistik',
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Fitur Statistik (coming soon)')),
+            );
+          },
+        ),
+
+        // Teman -> FriendListView
+        action(
+          icon: Icons.group_rounded,
+          label: 'Teman',
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const FriendListScreen()),
+            );
+          },
+        ),
       ],
     );
   }
@@ -419,3 +477,4 @@ class _TxTile extends StatelessWidget {
     );
   }
 }
+  
