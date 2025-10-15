@@ -6,6 +6,7 @@ import '../screens/profile_screen.dart';
 import '../screens/history_screen.dart';
 import '../screens/transaction_form_screen.dart';
 import '../screens/friend_list_screen.dart';
+import '../screens/statistics_screen.dart';
 import 'app_routes.dart';
 
 class AppRouter {
@@ -25,6 +26,10 @@ class AppRouter {
         return _fade(const HistoryScreen(), settings);
       case AppRoutes.transactionform:
         return _fade(const TransactionFormScreen(), settings);
+      case AppRoutes.friendlist:
+        return _fade(const FriendListScreen(), settings);
+      case AppRoutes.statistics:
+        return _fade(const StatisticsScreen(), settings);
 
       default:
         // fallback sederhana

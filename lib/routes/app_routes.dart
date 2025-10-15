@@ -6,6 +6,9 @@ class AppRoutes {
   static const profile  = '/profile';
   static const transactionform = '/transactionform';
   static const friendlist = '/friendlist';
+  static const statistics = '/statistics';
+  static const editprofile = '/editprofile';
+  static const about = '/about';
 
   // contoh lain:
   // static const home = '/';

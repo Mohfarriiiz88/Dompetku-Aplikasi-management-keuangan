@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:smartbudget/screens/edit_profile_screen.dart';
+import 'package:smartbudget/screens/about_screen.dart';
 import '../core/theme/theme.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/floating_navbar.dart';
@@ -68,7 +69,11 @@ class ProfileScreen extends StatelessWidget {
                     name: nama,
                     birthDate: tglLahir,
                     status: status,
-                    onTap: () {}, // bisa ke halaman detail profil
+                    onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+            );
+          }, // bisa ke halaman detail profil
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -97,7 +102,9 @@ class ProfileScreen extends StatelessWidget {
                         _SettingsTile(
                           label: 'Tentang Kami',
                           onTap: () {
-                            // TODO: Navigate ke about
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const AboutScreen()),
+                            );
                           },
                         ),
                         const SizedBox(height: 16),

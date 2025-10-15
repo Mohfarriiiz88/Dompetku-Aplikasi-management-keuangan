@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../screens/statistics_screen.dart';
 import '../screens/friend_list_screen.dart';
 import '../screens/transaction_form_screen.dart';
 import '../core/theme/theme.dart';
@@ -325,8 +326,8 @@ class _QuickActions extends StatelessWidget {
           icon: Icons.bar_chart_rounded,
           label: 'Statistik',
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Fitur Statistik (coming soon)')),
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StatisticsScreen()),
             );
           },
         ),
