@@ -39,7 +39,7 @@ class _AboutView extends StatelessWidget {
             centerTitle: true,
             title: const Text(
               'Tentang Kami',
-              style: TextStyle(fontWeight: FontWeight.w800),
+              style: TextStyle(fontWeight: FontWeight.w800,fontSize: 18),
             ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),

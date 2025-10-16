@@ -90,7 +90,7 @@ class _DraggableFeedSheet extends StatelessWidget {
 
     return DraggableScrollableSheet(
       initialChildSize: 0.58, // start posisi (≈ 58% tinggi layar)//
-      minChildSize: 0.45,     // bisa diturunkan sampai sini
+      minChildSize: 0.58,   // bisa diturunkan sampai sini
       maxChildSize: 0.95,     // bisa ditarik hampir penuh
       snap: true,
       snapSizes: const [0.58, 0.95],
