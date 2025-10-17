@@ -21,6 +21,7 @@ class AuthProvider extends ChangeNotifier {
   String? _token; // simpan token kalau nanti pakai API beneran
   AuthUser? _user; // <-- inilah yang dipakai di profile_screen
   AuthUser? get user => _user;
+  String? get token => _token;
 
   // Dummy LOGIN — set token & user supaya profile_screen bisa membaca.
   Future<bool> login({required String email, required String password}) async {
@@ -39,7 +40,8 @@ class AuthProvider extends ChangeNotifier {
         if (kDebugMode) print('[API LOGIN] ${resp.statusCode} ${resp.body}');
         if (resp.statusCode == 200) {
           final body = jsonDecode(resp.body) as Map<String, dynamic>;
-          _token = body['token'] as String?;
+          final data = body['data'] as Map<String, dynamic>?;
+          _token = data != null ? data['token'] as String? : null;
           // Minimal: set user from email, you can fetch /api/v1/me later
           _user = AuthUser(
             nama: email.split('@').first,

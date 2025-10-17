@@ -15,37 +15,44 @@ class TransactionFormScreen extends StatelessWidget {
   }
 }
 
-class _FormView extends StatelessWidget {
-  const _FormView();
+class _FormView extends StatefulWidget {
+  const _FormView({Key? key}) : super(key: key);
+
+  @override
+  State<_FormView> createState() => _FormViewState();
+}
+
+class _FormViewState extends State<_FormView> {
+  final _formKey = GlobalKey<FormState>();
 
   InputDecoration _dec(String hint) => InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide.none,
-        ),
-      );
+    hintText: hint,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: BorderSide.none,
+    ),
+  );
 
   Widget _label(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.black,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+        color: Colors.black,
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final p = context.watch<TransactionFormProvider>();
-    final formKey = GlobalKey<FormState>();
+    // provide a context for provider to read AuthProvider token when needed
+    p.globalFormContext = context;
 
     return Scaffold(
       backgroundColor: AppColors.greySurface,
@@ -54,13 +61,16 @@ class _FormView extends StatelessWidget {
         backgroundColor: AppColors.greySurface,
         foregroundColor: Colors.black,
         centerTitle: true,
-        title: const Text('Catat Keuangan', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Catat Keuangan',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           child: Form(
-            key: formKey,
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -68,15 +78,15 @@ class _FormView extends StatelessWidget {
                 DropdownButtonFormField<TxCategory>(
                   value: p.kategori,
                   items: TxCategory.values
-                      .map((e) => DropdownMenuItem(
-                            value: e,
-                            child: Text(e.label),
-                          ))
+                      .map(
+                        (e) => DropdownMenuItem(value: e, child: Text(e.label)),
+                      )
                       .toList(),
                   decoration: _dec(''),
                   icon: const Icon(Icons.keyboard_arrow_down_rounded),
                   onChanged: p.setKategori,
-                  validator: (_) => p.kategori == null ? 'Pilih kategori' : null,
+                  validator: (_) =>
+                      p.kategori == null ? 'Pilih kategori' : null,
                 ),
                 const SizedBox(height: 18),
 
@@ -106,10 +116,7 @@ class _FormView extends StatelessWidget {
                 const SizedBox(height: 18),
 
                 _label('Metode Pembayaran'),
-                TextFormField(
-                  controller: p.metodeC,
-                  decoration: _dec(''),
-                ),
+                TextFormField(controller: p.metodeC, decoration: _dec('')),
                 const SizedBox(height: 18),
 
                 _label('Keterangan'),
@@ -129,11 +136,13 @@ class _FormView extends StatelessWidget {
                         : () async {
                             final ok = await context
                                 .read<TransactionFormProvider>()
-                                .submit(formKey);
+                                .submit(_formKey);
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(ok ? 'Tersimpan' : 'Gagal menyimpan'),
+                                content: Text(
+                                  ok ? 'Tersimpan' : 'Gagal menyimpan',
+                                ),
                                 behavior: SnackBarBehavior.floating,
                               ),
                             );
@@ -147,10 +156,17 @@ class _FormView extends StatelessWidget {
                     ),
                     child: p.loading
                         ? const SizedBox(
-                            width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
-                        : const Text('Simpan', style: TextStyle(fontWeight: FontWeight.w700)),
+                        : const Text(
+                            'Simpan',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                   ),
                 ),
                 SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
