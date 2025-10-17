@@ -30,17 +30,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     final ok = await context.read<AuthProvider>().register(
-          username: usernameC.text.trim(),
-          email: emailC.text.trim(),
-          password: passC.text,
-        );
+      username: usernameC.text.trim(),
+      email: emailC.text.trim(),
+      password: passC.text,
+    );
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(ok ? 'Dummy register success' : 'Gagal mendaftar'),
-      behavior: SnackBarBehavior.floating,
-    ));
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pendaftaran berhasil. Silakan masuk.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal mendaftar'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -131,8 +145,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   24 + MediaQuery.of(context).padding.bottom,
                                 ),
                                 child: ConstrainedBox(
-                                  constraints:
-                                      BoxConstraints(minHeight: cons.maxHeight),
+                                  constraints: BoxConstraints(
+                                    minHeight: cons.maxHeight,
+                                  ),
                                   child: Form(
                                     key: _formKey,
                                     child: Column(
@@ -149,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         const SizedBox(height: 16),
 
                                         const Text(
-                                          'Username',
+                                          'Nama pengguna',
                                           style: TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
@@ -159,11 +174,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         TextFormField(
                                           controller: usernameC,
                                           decoration: const InputDecoration(
-                                            hintText: 'Username',
+                                            hintText: 'Nama pengguna',
                                           ),
-                                          validator: (v) => (v == null ||
-                                                  v.trim().isEmpty)
-                                              ? 'Username wajib diisi'
+                                          validator: (v) =>
+                                              (v == null || v.trim().isEmpty)
+                                              ? 'Nama pengguna wajib diisi'
                                               : null,
                                         ),
                                         const SizedBox(height: 14),
@@ -184,13 +199,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                             hintText: 'E-Mail',
                                           ),
                                           validator: (v) {
-                                            if (v == null ||
-                                                v.trim().isEmpty) {
+                                            if (v == null || v.trim().isEmpty) {
                                               return 'E-Mail wajib diisi';
                                             }
                                             final ok = RegExp(
-                                                    r'^[^@]+@[^@]+\.[^@]+$')
-                                                .hasMatch(v.trim());
+                                              r'^[^@]+@[^@]+\.[^@]+$',
+                                            ).hasMatch(v.trim());
                                             return ok
                                                 ? null
                                                 : 'Format e-mail tidak valid';
@@ -212,8 +226,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           decoration: const InputDecoration(
                                             hintText: 'Kata sandi',
                                           ),
-                                          validator: (v) => (v == null ||
-                                                  v.length < 6)
+                                          validator: (v) =>
+                                              (v == null || v.length < 6)
                                               ? 'Minimal 6 karakter'
                                               : null,
                                         ),
@@ -222,8 +236,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         CustomButton(
                                           label: 'Daftar',
                                           loading: auth.loading,
-                                          onPressed:
-                                              auth.loading ? null : _submit,
+                                          onPressed: auth.loading
+                                              ? null
+                                              : _submit,
                                         ),
                                       ],
                                     ),
