@@ -11,25 +11,22 @@ class AuthUser {
   final String email;
   final String? img;
 
-  const AuthUser({
-    required this.nama,
-    required this.email,
-    this.img,
-  });
+  const AuthUser({required this.nama, required this.email, this.img});
 }
 
 class AuthProvider extends ChangeNotifier {
   bool _loading = false;
   bool get loading => _loading;
 
-  String? _token;           // simpan token kalau nanti pakai API beneran
-  AuthUser? _user;          // <-- inilah yang dipakai di profile_screen
+  String? _token; // simpan token kalau nanti pakai API beneran
+  AuthUser? _user; // <-- inilah yang dipakai di profile_screen
   AuthUser? get user => _user;
 
   // Dummy LOGIN — set token & user supaya profile_screen bisa membaca.
   Future<bool> login({required String email, required String password}) async {
     if (_loading) return false;
-    _loading = true; notifyListeners();
+    _loading = true;
+    notifyListeners();
     try {
       // If configured to use API, call backend
       if (useApi && baseUrl.isNotEmpty) {
@@ -44,7 +41,11 @@ class AuthProvider extends ChangeNotifier {
           final body = jsonDecode(resp.body) as Map<String, dynamic>;
           _token = body['token'] as String?;
           // Minimal: set user from email, you can fetch /api/v1/me later
-          _user = AuthUser(nama: email.split('@').first, email: email, img: null);
+          _user = AuthUser(
+            nama: email.split('@').first,
+            email: email,
+            img: null,
+          );
           return true;
         }
         return false;
@@ -60,7 +61,8 @@ class AuthProvider extends ChangeNotifier {
     } catch (_) {
       return false;
     } finally {
-      _loading = false; notifyListeners();
+      _loading = false;
+      notifyListeners();
     }
   }
 
@@ -71,20 +73,42 @@ class AuthProvider extends ChangeNotifier {
     required String password,
   }) async {
     if (_loading) return false;
-    _loading = true; notifyListeners();
+    _loading = true;
+    notifyListeners();
     try {
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (kDebugMode) {
-        print('[DUMMY REGISTER] username=$username email=$email password=$password');
+      // If configured to use API, call backend register
+      if (useApi && baseUrl.isNotEmpty) {
+        final url = Uri.parse('$baseUrl/api/v1/auth/register');
+        final resp = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'nama': username,
+            'email': email,
+            'password': password,
+          }),
+        );
+        if (kDebugMode) print('[API REGISTER] ${resp.statusCode} ${resp.body}');
+        if (resp.statusCode == 200 || resp.statusCode == 201) {
+          return true;
+        }
+        return false;
       }
 
+      // Fallback dummy behaviour
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (kDebugMode)
+        print(
+          '[DUMMY REGISTER] username=$username email=$email password=$password',
+        );
       _token = 'dummy-token';
-      _user  = AuthUser(nama: username, email: email, img: null);
+      _user = AuthUser(nama: username, email: email, img: null);
       return true;
     } catch (_) {
       return false;
     } finally {
-      _loading = false; notifyListeners();
+      _loading = false;
+      notifyListeners();
     }
   }
 
@@ -99,7 +123,7 @@ class AuthProvider extends ChangeNotifier {
   /// Logout untuk menu Pengaturan.
   Future<void> logout() async {
     _token = null;
-    _user  = null;
+    _user = null;
     notifyListeners();
   }
 }

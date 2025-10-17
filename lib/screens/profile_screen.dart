@@ -4,6 +4,7 @@ import 'package:smartbudget/screens/edit_profile_screen.dart';
 import 'package:smartbudget/screens/about_screen.dart';
 import '../core/theme/theme.dart';
 import '../providers/auth_provider.dart';
+import 'package:smartbudget/routes/app_routes.dart';
 import '../widgets/floating_navbar.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -70,10 +71,12 @@ class ProfileScreen extends StatelessWidget {
                     birthDate: tglLahir,
                     status: status,
                     onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-            );
-          }, // bisa ke halaman detail profil
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const EditProfileScreen(),
+                        ),
+                      );
+                    }, // bisa ke halaman detail profil
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -103,7 +106,9 @@ class ProfileScreen extends StatelessWidget {
                           label: 'Tentang Kami',
                           onTap: () {
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const AboutScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const AboutScreen(),
+                              ),
                             );
                           },
                         ),
@@ -113,7 +118,11 @@ class ProfileScreen extends StatelessWidget {
                           textColor: AppColors.red, // biar stand out
                           onTap: () async {
                             await context.read<AuthProvider>().logout();
-                            // TODO: arahkan ke halaman login jika diperlukan
+                            // arahkan ke halaman login dan kosongkan stack
+                            Navigator.of(context).pushNamedAndRemoveUntil(
+                              AppRoutes.login,
+                              (route) => false,
+                            );
                           },
                         ),
                       ],
@@ -235,11 +244,7 @@ class _SettingsTile extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? textColor;
 
-  const _SettingsTile({
-    required this.label,
-    this.onTap,
-    this.textColor,
-  });
+  const _SettingsTile({required this.label, this.onTap, this.textColor});
 
   @override
   Widget build(BuildContext context) {
