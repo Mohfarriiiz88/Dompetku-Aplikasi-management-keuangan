@@ -138,14 +138,23 @@ class _FormViewState extends State<_FormView> {
                                 .read<TransactionFormProvider>()
                                 .submit(_formKey);
                             if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  ok ? 'Tersimpan' : 'Gagal menyimpan',
+                            if (ok) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Tersimpan'),
+                                  behavior: SnackBarBehavior.floating,
                                 ),
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
+                              );
+                              // close form and signal success to caller
+                              Navigator.of(context).pop(true);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Gagal menyimpan'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.purple,

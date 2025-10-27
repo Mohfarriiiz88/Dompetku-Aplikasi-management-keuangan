@@ -10,8 +10,14 @@ class AuthUser {
   final String nama;
   final String email;
   final String? img;
+  final int? balance;
 
-  const AuthUser({required this.nama, required this.email, this.img});
+  const AuthUser({
+    required this.nama,
+    required this.email,
+    this.img,
+    this.balance,
+  });
 }
 
 class AuthProvider extends ChangeNotifier {
@@ -42,12 +48,8 @@ class AuthProvider extends ChangeNotifier {
           final body = jsonDecode(resp.body) as Map<String, dynamic>;
           final data = body['data'] as Map<String, dynamic>?;
           _token = data != null ? data['token'] as String? : null;
-          // Minimal: set user from email, you can fetch /api/v1/me later
-          _user = AuthUser(
-            nama: email.split('@').first,
-            email: email,
-            img: null,
-          );
+          // fetch profile after getting token
+          await loadProfile();
           return true;
         }
         return false;
@@ -117,7 +119,38 @@ class AuthProvider extends ChangeNotifier {
   /// Kalau nanti pakai API /auth/me, panggil ini untuk refresh profil.
   Future<void> loadProfile() async {
     if (_token == null) return;
-    // Dummy: kalau belum ada user, isi default
+    try {
+      final url = Uri.parse('$baseUrl/api/v1/me');
+      final resp = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+      if (kDebugMode) print('[API ME] ${resp.statusCode} ${resp.body}');
+      if (resp.statusCode == 200) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final data = body['data'] as Map<String, dynamic>?;
+        if (data != null) {
+          final bal = data['balance'];
+          int? balInt;
+          if (bal is int) balInt = bal;
+          if (bal is double) balInt = bal.toInt();
+          _user = AuthUser(
+            nama: data['nama']?.toString() ?? '',
+            email: data['email']?.toString() ?? '',
+            img: data['img']?.toString(),
+            balance: balInt,
+          );
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('[API ME ERROR] $e');
+    }
+    // fallback: keep existing user or dummy
     _user ??= const AuthUser(nama: 'Moh. Fariz', email: 'user@mail.com');
     notifyListeners();
   }

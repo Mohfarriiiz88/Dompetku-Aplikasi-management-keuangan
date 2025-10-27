@@ -5,6 +5,7 @@ import '../screens/friend_list_screen.dart';
 import '../screens/transaction_form_screen.dart';
 import '../core/theme/theme.dart';
 import '../providers/home_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/floating_navbar.dart';
 import '../widgets/white_blur_card.dart';
 
@@ -18,6 +19,11 @@ class HomeScreen extends StatelessWidget {
       precacheImage(const AssetImage('assets/images/bgcircle.png'), context);
     });
 
+    // fetch transactions once after build if API enabled
+    // NOTE: initial fetch moved into _HomeView.initState so that the
+    // HomeProvider is available in the widget subtree. Calling provider
+    // from this context (above the ChangeNotifierProvider) will not work.
+
     return ChangeNotifierProvider(
       create: (_) => HomeProvider(),
       child: const _HomeView(),
@@ -25,8 +31,34 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   const _HomeView();
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  @override
+  void initState() {
+    super.initState();
+    // run initial fetch after first frame so providers are available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final token = Provider.of<AuthProvider>(context, listen: false).token;
+        if (token != null) {
+          Provider.of<HomeProvider>(
+            context,
+            listen: false,
+          ).fetchTransactions(token: token);
+        } else {
+          Provider.of<HomeProvider>(context, listen: false).fetchTransactions();
+        }
+      } catch (_) {
+        // ignore if providers not available
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +88,32 @@ class _HomeView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _HeaderPill(name: 'Moh Fariz'),
+                  // show logged-in user's name (fallback to placeholder)
+                  Builder(
+                    builder: (ctx) {
+                      final auth = Provider.of<AuthProvider>(
+                        ctx,
+                        listen: false,
+                      );
+                      final name = auth.user?.nama ?? 'Pengguna';
+                      return _HeaderPill(name: name);
+                    },
+                  ),
                   const SizedBox(height: 16),
-                  _WalletCard(balance: hp.balance),
+                  // prefer server-stored wallet balance from AuthProvider if available;
+                  // otherwise use provider's unfiltered total only after initial fetch
+                  Builder(
+                    builder: (ctx) {
+                      final auth = Provider.of<AuthProvider>(
+                        ctx,
+                        listen: false,
+                      );
+                      final int bal =
+                          auth.user?.balance ??
+                          (hp.hasFetched ? hp.totalBalanceAll : 0);
+                      return _WalletCard(balance: bal);
+                    },
+                  ),
                   const SizedBox(height: 16),
                   const _QuickActions(),
                   const SizedBox(height: 8), // beri jarak tipis dari sheet
@@ -90,8 +145,8 @@ class _DraggableFeedSheet extends StatelessWidget {
 
     return DraggableScrollableSheet(
       initialChildSize: 0.58, // start posisi (≈ 58% tinggi layar)//
-      minChildSize: 0.58,   // bisa diturunkan sampai sini
-      maxChildSize: 0.95,     // bisa ditarik hampir penuh
+      minChildSize: 0.58, // bisa diturunkan sampai sini
+      maxChildSize: 0.95, // bisa ditarik hampir penuh
       snap: true,
       snapSizes: const [0.58, 0.95],
       builder: (context, scrollController) {
@@ -101,7 +156,8 @@ class _DraggableFeedSheet extends StatelessWidget {
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: ListView(
-            controller: scrollController, // << penting agar drag/scroll nyambung
+            controller:
+                scrollController, // << penting agar drag/scroll nyambung
             padding: const EdgeInsets.fromLTRB(16, 8, 16, navBarReserve),
             children: [
               // handle
@@ -179,18 +235,29 @@ class _HeaderPill extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: const [
-          SizedBox(
-            width: 20,
-            height: 20,
-            child: DecoratedBox(
-              decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
-          ),
-          SizedBox(width: 8),
-          Text('Moh Fariz',
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
-        ]),
+            const SizedBox(width: 8),
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -225,9 +292,9 @@ class _WalletCard extends StatelessWidget {
           Text(
             'Isi Dompetmu',
             style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                  color: Colors.white.withOpacity(.6),
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Colors.white.withOpacity(.6),
+              fontWeight: FontWeight.w600,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
@@ -303,10 +370,36 @@ class _QuickActions extends StatelessWidget {
         action(
           icon: Icons.request_quote_rounded,
           label: 'Catat\nKeuangan',
-          onTap: () {
-            Navigator.of(context).push(
+          onTap: () async {
+            // capture token before navigation to avoid using BuildContext
+            // across async gaps (and to satisfy analyzer)
+            String? token;
+            try {
+              token = Provider.of<AuthProvider>(context, listen: false).token;
+            } catch (_) {
+              token = null;
+            }
+
+            final res = await Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const TransactionFormScreen()),
             );
+
+            // when form returns true (saved), refresh transactions
+            if (res == true) {
+              try {
+                if (token != null) {
+                  await Provider.of<HomeProvider>(
+                    context,
+                    listen: false,
+                  ).fetchTransactions(token: token);
+                } else {
+                  await Provider.of<HomeProvider>(
+                    context,
+                    listen: false,
+                  ).fetchTransactions();
+                }
+              } catch (_) {}
+            }
           },
         ),
 
@@ -326,9 +419,9 @@ class _QuickActions extends StatelessWidget {
           icon: Icons.bar_chart_rounded,
           label: 'Statistik',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StatisticsScreen()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const StatisticsScreen()));
           },
         ),
 
@@ -337,9 +430,9 @@ class _QuickActions extends StatelessWidget {
           icon: Icons.group_rounded,
           label: 'Teman',
           onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FriendListScreen()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const FriendListScreen()));
           },
         ),
       ],
@@ -353,15 +446,20 @@ class _Segmented extends StatelessWidget {
   final void Function(int) onChanged;
   final List<String> labels;
 
-  const _Segmented(
-      {required this.index, required this.onChanged, required this.labels});
+  const _Segmented({
+    required this.index,
+    required this.onChanged,
+    required this.labels,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-          color: AppColors.greySurface, borderRadius: BorderRadius.circular(16)),
+        color: AppColors.greySurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Row(
         children: List.generate(labels.length, (i) {
           final selected = i == index;
@@ -377,9 +475,10 @@ class _Segmented extends StatelessWidget {
                   boxShadow: selected
                       ? [
                           BoxShadow(
-                              color: Colors.black.withOpacity(.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4))
+                            color: Colors.black.withOpacity(.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
                         ]
                       : null,
                 ),
@@ -406,12 +505,22 @@ class _TxTile extends StatelessWidget {
 
   String _dateFmt(DateTime d) {
     const mons = [
-      'Januari','Februari','Maret','April','Mei','Juni',
-      'Juli','Agustus','September','Oktober','November','Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     final hh = d.hour.toString().padLeft(2, '0');
     final mm = d.minute.toString().padLeft(2, '0');
-    return '$hh:$mm • ${d.day} ${mons[d.month-1]} ${d.year}';
+    return '$hh:$mm • ${d.day} ${mons[d.month - 1]} ${d.year}';
   }
 
   String _rp(int n) {
@@ -436,9 +545,10 @@ class _TxTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(.06),
-              blurRadius: 10,
-              offset: const Offset(0, 6))
+            color: Colors.black.withOpacity(.06),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
         ],
       ),
       child: Row(
@@ -453,7 +563,9 @@ class _TxTile extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isIncome ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+              isIncome
+                  ? Icons.arrow_upward_rounded
+                  : Icons.arrow_downward_rounded,
               color: isIncome ? AppColors.green : AppColors.red,
             ),
           ),
@@ -462,20 +574,27 @@ class _TxTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title,
-                    style:
-                        const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('${item.category}\n${_dateFmt(item.time)}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                  '${item.category}\n${_dateFmt(item.time)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
               ],
             ),
           ),
-          Text(_rp(item.amount),
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            _rp(item.amount),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
   }
 }
-  
