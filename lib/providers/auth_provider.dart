@@ -11,12 +11,20 @@ class AuthUser {
   final String email;
   final String? img;
   final int? balance;
+  final String? phone;
+  final String? gender;
+  final DateTime? birthday;
+  final String? status;
 
   const AuthUser({
     required this.nama,
     required this.email,
     this.img,
     this.balance,
+    this.phone,
+    this.gender,
+    this.birthday,
+    this.status,
   });
 }
 
@@ -142,6 +150,13 @@ class AuthProvider extends ChangeNotifier {
             email: data['email']?.toString() ?? '',
             img: data['img']?.toString(),
             balance: balInt,
+            phone: data['phone']?.toString(),
+            gender: data['gender']?.toString(),
+            status: data['status']?.toString(),
+            // parse birthday and convert to local to avoid off-by-one due to UTC offset
+            birthday: data['birthday'] != null
+                ? (DateTime.tryParse(data['birthday'].toString())?.toLocal())
+                : null,
           );
           notifyListeners();
           return;
