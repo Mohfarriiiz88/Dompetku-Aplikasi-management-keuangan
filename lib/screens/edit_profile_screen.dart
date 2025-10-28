@@ -2,9 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../core/theme/theme.dart';
 import '../providers/profile_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/custom_button.dart';
 
 class EditProfileScreen extends StatelessWidget {
@@ -13,8 +15,9 @@ class EditProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      // Provider khusus halaman ini (dummy state awal di provider)
-      create: (_) => ProfileProvider(),
+      // Provider khusus halaman ini, initialised from global AuthProvider
+      create: (context) =>
+          ProfileProvider.fromAuth(context.read<AuthProvider>().user),
       child: const _EditProfileView(),
     );
   }
@@ -45,11 +48,11 @@ class _EditProfileViewState extends State<_EditProfileView> {
     // ambil nilai awal dari provider setelah build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final p = context.read<ProfileProvider>();
-      _usernameC.text = p.username;
-      _phoneC.text = p.phone;
+      _usernameC.text = p.username ?? '';
+      _phoneC.text = p.phone ?? '';
       _gender = p.gender;
       _birthday = p.birthday;
-      _birthC.text = _fmtDate(p.birthday);
+      _birthC.text = p.birthday != null ? _fmtDate(p.birthday!) : '';
       _status = p.status;
       setState(() {});
     });
@@ -65,8 +68,18 @@ class _EditProfileViewState extends State<_EditProfileView> {
 
   String _fmtDate(DateTime d) {
     const mons = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
-      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agu',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des',
     ];
     return '${d.day.toString().padLeft(2, '0')} ${mons[d.month - 1]} ${d.year}';
   }
@@ -85,9 +98,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: AppColors.purple,
-                  onPrimary: Colors.white,
-                ),
+              primary: AppColors.purple,
+              onPrimary: Colors.white,
+            ),
           ),
           child: child!,
         );
@@ -105,19 +118,34 @@ class _EditProfileViewState extends State<_EditProfileView> {
     if (!_formKey.currentState!.validate()) return;
 
     final p = context.read<ProfileProvider>();
-    await p.updateProfile(
+    // capture AuthProvider and UI helpers before any await to avoid using
+    // BuildContext across async gaps (satisfies analyzer rule).
+    final authProv = context.read<AuthProvider>();
+    final token = authProv.token;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await p.updateProfile(
       username: _usernameC.text.trim(),
       phone: _phoneC.text.trim(),
       gender: _gender!,
       birthday: _birthday!,
       status: _status!,
+      token: token,
     );
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profil berhasil diperbarui.')),
-    );
-    Navigator.pop(context); // opsional: kembali setelah simpan
+    if (ok) {
+      // reload global profile so header/balance refresh
+      if (token != null) await authProv.loadProfile();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Profil berhasil diperbarui.')),
+      );
+      navigator.pop(); // opsional: kembali setelah simpan
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Gagal memperbarui profil. Coba lagi.')),
+      );
+    }
   }
 
   @override
@@ -128,7 +156,7 @@ class _EditProfileViewState extends State<_EditProfileView> {
       builder: (context, c) {
         final w = c.maxWidth;
         final avatarSize = math.min(w * 0.28, 120.0); // responsif
-        final sidePad = math.max(16.0, w * 0.05);     // padding proporsional
+        final sidePad = math.max(16.0, w * 0.05); // padding proporsional
 
         return Scaffold(
           resizeToAvoidBottomInset: true,
@@ -149,7 +177,9 @@ class _EditProfileViewState extends State<_EditProfileView> {
           body: SafeArea(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(
-                sidePad, 16, sidePad,
+                sidePad,
+                16,
+                sidePad,
                 16 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Column(
@@ -185,10 +215,14 @@ class _EditProfileViewState extends State<_EditProfileView> {
                           TextFormField(
                             controller: _usernameC,
                             textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(hintText: 'Masukkan username'),
+                            decoration: const InputDecoration(
+                              hintText: 'Masukkan username',
+                            ),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Wajib diisi';
-                              if (v.trim().length < 3) return 'Minimal 3 karakter';
+                              if (v == null || v.trim().isEmpty)
+                                return 'Wajib diisi';
+                              if (v.trim().length < 3)
+                                return 'Minimal 3 karakter';
                               return null;
                             },
                           ),
@@ -200,13 +234,16 @@ class _EditProfileViewState extends State<_EditProfileView> {
                           TextFormField(
                             controller: _phoneC,
                             keyboardType: TextInputType.phone,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(
                               hintText: 'Masukkan nomor telepon',
                             ),
                             validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Wajib diisi';
+                              if (v == null || v.trim().isEmpty)
+                                return 'Wajib diisi';
                               if (!RegExp(r'^[0-9]+$').hasMatch(v)) {
                                 return 'Hanya boleh angka';
                               }
@@ -221,11 +258,19 @@ class _EditProfileViewState extends State<_EditProfileView> {
                           DropdownButtonFormField<String>(
                             value: _gender,
                             items: const [
-                              DropdownMenuItem(value: 'Laki-laki', child: Text('Laki-laki')),
-                              DropdownMenuItem(value: 'Perempuan', child: Text('Perempuan')),
+                              DropdownMenuItem(
+                                value: 'Laki-laki',
+                                child: Text('Laki-laki'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Perempuan',
+                                child: Text('Perempuan'),
+                              ),
                             ],
                             onChanged: (v) => setState(() => _gender = v),
-                            decoration: const InputDecoration(hintText: 'Pilih jenis kelamin'),
+                            decoration: const InputDecoration(
+                              hintText: 'Pilih jenis kelamin',
+                            ),
                             validator: (v) => v == null ? 'Wajib diisi' : null,
                           ),
                           const SizedBox(height: 14),
@@ -241,7 +286,8 @@ class _EditProfileViewState extends State<_EditProfileView> {
                               hintText: 'Pilih tanggal lahir',
                               suffixIcon: Icon(Icons.date_range_rounded),
                             ),
-                            validator: (_) => _birthday == null ? 'Wajib diisi' : null,
+                            validator: (_) =>
+                                _birthday == null ? 'Wajib diisi' : null,
                           ),
                           const SizedBox(height: 14),
 
@@ -251,12 +297,23 @@ class _EditProfileViewState extends State<_EditProfileView> {
                           DropdownButtonFormField<String>(
                             value: _status,
                             items: const [
-                              DropdownMenuItem(value: 'Aktif', child: Text('Aktif')),
-                              DropdownMenuItem(value: 'Nonaktif', child: Text('Nonaktif')),
-                              DropdownMenuItem(value: 'Lainnya', child: Text('Lainnya')),
+                              DropdownMenuItem(
+                                value: 'Aktif',
+                                child: Text('Aktif'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Nonaktif',
+                                child: Text('Nonaktif'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Lainnya',
+                                child: Text('Lainnya'),
+                              ),
                             ],
                             onChanged: (v) => setState(() => _status = v),
-                            decoration: const InputDecoration(hintText: 'Pilih status'),
+                            decoration: const InputDecoration(
+                              hintText: 'Pilih status',
+                            ),
                             validator: (v) => v == null ? 'Wajib diisi' : null,
                           ),
                           const SizedBox(height: 20),
@@ -292,9 +349,9 @@ class _Labeled extends StatelessWidget {
       child: Text(
         text,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
+          fontWeight: FontWeight.w700,
+          color: AppColors.textDark,
+        ),
       ),
     );
   }
@@ -331,13 +388,16 @@ class _AvatarWithCamera extends StatelessWidget {
                 ),
               ],
               image: p.photoUrl != null
-                  ? DecorationImage(image: NetworkImage(p.photoUrl!), fit: BoxFit.cover)
+                  ? DecorationImage(
+                      image: NetworkImage(p.photoUrl!),
+                      fit: BoxFit.cover,
+                    )
                   : null,
             ),
             child: p.photoUrl == null
                 ? Center(
                     child: Text(
-                      _initials(p.username),
+                      _initials(p.username ?? ''),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
@@ -356,10 +416,29 @@ class _AvatarWithCamera extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () async {
-                  await context.read<ProfileProvider>().changePhotoDummy();
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ganti foto (dummy)')),
+                  // pick image and upload
+                  final picker = ImagePicker();
+                  final xfile = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    maxWidth: 1600,
+                  );
+                  if (xfile == null) return;
+
+                  // capture providers/helpers before await
+                  final p = context.read<ProfileProvider>();
+                  final auth = context.read<AuthProvider>();
+                  final messenger = ScaffoldMessenger.of(context);
+
+                  final ok = await p.uploadAvatar(xfile, auth.token);
+                  if (!context.mounted) return;
+                  if (ok) {
+                    if (auth.token != null) await auth.loadProfile();
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Foto profil diperbarui.')),
+                    );
+                  } else {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Gagal mengunggah foto')),
                     );
                   }
                 },
@@ -371,7 +450,10 @@ class _AvatarWithCamera extends StatelessWidget {
                     color: AppColors.yellow,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.camera_alt_rounded, color: Colors.black),
+                  child: const Icon(
+                    Icons.camera_alt_rounded,
+                    color: Colors.black,
+                  ),
                 ),
               ),
             ),
@@ -385,6 +467,7 @@ class _AvatarWithCamera extends StatelessWidget {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty) return 'U';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 }

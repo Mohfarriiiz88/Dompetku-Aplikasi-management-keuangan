@@ -20,10 +20,14 @@ class ProfileScreen extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final user = auth.user;
 
-    // Data dummy jika belum ada profil dari API
-    final nama = user?.nama.isNotEmpty == true ? user!.nama : 'Moh. Fariz';
-    final tglLahir = '17 Januari 2003';
-    final status = 'Mahasiswa';
+    // Use DB values from user (AuthProvider.loadProfile already fetched /me)
+    final nama = (user?.nama != null && user!.nama.isNotEmpty)
+        ? user.nama
+        : 'Moh. Fariz';
+    final tglLahir = user?.birthday != null
+        ? _fmtDate(user!.birthday!)
+        : 'Belum diisi';
+    final status = user?.status ?? 'Belum diisi';
 
     return Scaffold(
       body: Stack(
@@ -70,6 +74,7 @@ class ProfileScreen extends StatelessWidget {
                     name: nama,
                     birthDate: tglLahir,
                     status: status,
+                    avatarUrl: user?.img,
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
@@ -141,17 +146,37 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
+String _fmtDate(DateTime d) {
+  const mons = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+  return '${d.day.toString().padLeft(2, '0')} ${mons[d.month - 1]} ${d.year}';
+}
+
 /// Kartu info profil (avatar + nama + tgl lahir + status)
 class _ProfileInfoCard extends StatelessWidget {
   final String name;
   final String birthDate;
   final String status;
+  final String? avatarUrl;
   final VoidCallback? onTap;
 
   const _ProfileInfoCard({
     required this.name,
     required this.birthDate,
     required this.status,
+    this.avatarUrl,
     this.onTap,
   });
 
@@ -187,11 +212,25 @@ class _ProfileInfoCard extends StatelessWidget {
                   color: const Color(0xFFECEBFF), // nuansa ungu muda
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.person_2_outlined,
-                  size: 28,
-                  color: AppColors.purple,
-                ),
+                child: avatarUrl != null
+                    ? ClipOval(
+                        child: Image.network(
+                          avatarUrl!,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.person_2_outlined,
+                            size: 28,
+                            color: AppColors.purple,
+                          ),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person_2_outlined,
+                        size: 28,
+                        color: AppColors.purple,
+                      ),
               ),
               const SizedBox(width: 14),
 

@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/theme.dart';
 import '../providers/statistics_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/paged_bar_chart.dart';
-
 
 class StatisticsScreen extends StatelessWidget {
   const StatisticsScreen({super.key});
@@ -18,8 +18,27 @@ class StatisticsScreen extends StatelessWidget {
   }
 }
 
-class _StatisticsView extends StatelessWidget {
+class _StatisticsView extends StatefulWidget {
   const _StatisticsView();
+
+  @override
+  State<_StatisticsView> createState() => _StatisticsViewState();
+}
+
+class _StatisticsViewState extends State<_StatisticsView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final token = Provider.of<AuthProvider>(context, listen: false).token;
+        await Provider.of<StatisticsProvider>(
+          context,
+          listen: false,
+        ).fetchFromApi(token: token);
+      } catch (_) {}
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +54,10 @@ class _StatisticsView extends StatelessWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Statistik', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text(
+          'Statistik',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
@@ -95,13 +117,12 @@ class _StatisticsView extends StatelessWidget {
 
                     // chart
                     Expanded(
-  child: PagedBarChart(
-    months: p.months,
-    incomes: p.incomes,
-    expenses: p.expenses,
-  ),
-),
-
+                      child: PagedBarChart(
+                        months: p.months,
+                        incomes: p.incomes,
+                        expenses: p.expenses,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -144,7 +165,10 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600, height: 1.1)),
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600, height: 1.1),
+            ),
             const SizedBox(height: 6),
             Text(
               value,
@@ -170,9 +194,15 @@ class _SectionHeader extends StatelessWidget {
     return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Vertikal Bar', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+        Text(
+          'Vertikal Bar',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+        ),
         SizedBox(height: 2),
-        Text('Statistik keuanganmu perbulan', style: TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(
+          'Statistik keuanganmu perbulan',
+          style: TextStyle(fontSize: 12, color: Colors.black54),
+        ),
       ],
     );
   }
@@ -187,9 +217,16 @@ class _LegendDot extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(width: 14, height: 14, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+        ),
       ],
     );
   }

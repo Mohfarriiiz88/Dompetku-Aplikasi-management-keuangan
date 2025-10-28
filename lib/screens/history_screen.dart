@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/theme.dart';
-import '../providers/history_provider.dart';
-import '../providers/home_provider.dart' show TransactionItem, TxType;
+import '../providers/home_provider.dart'
+    show HomeProvider, TransactionItem, TxType;
+import '../providers/auth_provider.dart';
 import '../widgets/floating_navbar.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -12,239 +13,96 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => HistoryProvider(),
+      // Use HomeProvider so History reads transactions from the same
+      // backend source as the Home draggable sheet.
+      create: (_) => HomeProvider(),
       child: const _HistoryView(),
     );
   }
 }
 
-class _HistoryView extends StatelessWidget {
+class _HistoryView extends StatefulWidget {
   const _HistoryView();
 
   @override
+  State<_HistoryView> createState() => _HistoryViewState();
+}
+
+class _HistoryViewState extends State<_HistoryView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final token = Provider.of<AuthProvider>(context, listen: false).token;
+        if (token != null) {
+          Provider.of<HomeProvider>(
+            context,
+            listen: false,
+          ).fetchTransactions(token: token);
+        } else {
+          Provider.of<HomeProvider>(context, listen: false).fetchTransactions();
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final hp = context.watch<HistoryProvider>();
+    final hp = context.watch<HomeProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.greySurface,
-      body: Stack(
-        children: [
-          // ===== HEADER =====
-          SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  const Text(
+                    'Riwayat',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
+                  // keep a simple filter/action icon placeholder
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Riwayat',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ),
-                  // Tombol filter (sheet)
-                  InkWell(
-                    onTap: () => _openFilterSheet(context),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(17),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(Icons.tune_rounded, size: 18),
-                    ),
+                    onPressed: () {},
+                    icon: const Icon(Icons.filter_list_rounded),
                   ),
                 ],
               ),
             ),
-          ),
 
-          // ===== BODY =====
-          Padding(
-            padding: const EdgeInsets.only(top: 64),
-            child: Column(
-              children: [
-                // Segmented tabs (Hari ini / Minggu ini / Bulan ini)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _Segmented(
-                    index: switch (hp.range) {
-                      HistoryRange.today => 0,
-                      HistoryRange.week => 1,
-                      HistoryRange.month => 2,
-                    },
-                    labels: const ['Hari ini', 'Minggu ini', 'Bulan ini'],
-                    onChanged: (i) => hp.setRange(
-                      [HistoryRange.today, HistoryRange.week, HistoryRange.month][i],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // List transaksi
-                Expanded(
-                  child: hp.view.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Tidak ada transaksi',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
-                          itemCount: hp.view.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
-                          itemBuilder: (_, i) => _TxCard(item: hp.view[i]),
-                        ),
-                ),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _Segmented(
+                index: hp.segment,
+                labels: const ['Hari ini', 'Minggu ini', 'Bulan ini'],
+                onChanged: (i) => hp.setSegment(i),
+              ),
             ),
-          ),
+            const SizedBox(height: 12),
 
-          // ===== NAVBAR =====
-          const AppFloatingNavBar(currentIndex: 1),
-        ],
-      ),
-    );
-  }
-
-  void _openFilterSheet(BuildContext context) {
-    final hp = context.read<HistoryProvider>();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).padding.bottom + 12,
-          left: 16,
-          right: 16,
-          top: 12,
-        ),
-        child: StatefulBuilder(
-          builder: (ctx, setState) {
-            // state lokal untuk preview sebelum Apply
-            final selected = <String>{}; // tidak dipakai persist; demo simple
-            bool newest = hp.sortNewestFirst;
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36, height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.black26,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text('Filter kategori',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8, runSpacing: 8,
-                  children: hp.categories.map((c) {
-                    final sel = selected.contains(c);
-                    return FilterChip(
-                      label: Text(c),
-                      selected: sel,
-                      onSelected: (v) {
-                        setState(() {
-                          if (v) {
-                            selected.add(c);
-                          } else {
-                            selected.remove(c);
-                          }
-                        });
-                      },
-                      selectedColor: AppColors.yellow.withOpacity(.25),
-                      checkmarkColor: Colors.black,
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                const Text('Urutkan',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Terbaru'),
-                      selected: newest,
-                      onSelected: (_) => setState(() => newest = true),
-                    ),
-                    const SizedBox(width: 8),
-                    ChoiceChip(
-                      label: const Text('Terlama'),
-                      selected: !newest,
-                      onSelected: (_) => setState(() => newest = false),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          hp.clearCategory();
-                          hp.setSort(true);
-                          Navigator.pop(ctx);
-                        },
-                        child: const Text('Reset'),
+            Expanded(
+              child: hp.filtered.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Tidak ada transaksi',
+                        style: TextStyle(fontWeight: FontWeight.w700),
                       ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+                      itemCount: hp.filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (_, i) => _TxCard(item: hp.filtered[i]),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.purple,
-                          foregroundColor: Colors.white,
-                        ),
-                        onPressed: () {
-                          // Terapkan
-                          for (final c in hp.categories) {
-                            // buang dahulu
-                            // (implementasi praktis; kalau mau persist, pindah state ke provider)
-                          }
-                          // Untuk demo simpel: set sorting saja
-                          hp.setSort(newest);
-                          Navigator.pop(ctx);
-                        },
-                        child: const Text('Terapkan'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
+            ),
+          ],
         ),
       ),
+      bottomNavigationBar: const AppFloatingNavBar(currentIndex: 1),
     );
   }
 }
@@ -315,12 +173,22 @@ class _TxCard extends StatelessWidget {
 
   String _dateFmt(DateTime d) {
     const mons = [
-      'Januari','Februari','Maret','April','Mei','Juni',
-      'Juli','Agustus','September','Oktober','November','Desember'
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     final hh = d.hour.toString().padLeft(2, '0');
     final mm = d.minute.toString().padLeft(2, '0');
-    return '$hh:$mm • ${d.day} ${mons[d.month-1]} ${d.year}';
+    return '$hh:$mm • ${d.day} ${mons[d.month - 1]} ${d.year}';
   }
 
   String _rp(int n) {
@@ -354,7 +222,8 @@ class _TxCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: isIncome
                   ? AppColors.green.withOpacity(.12)
@@ -373,18 +242,25 @@ class _TxCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 14)),
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('${item.category}\n${_dateFmt(item.time)}',
-                    style:
-                        const TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                  '${item.category}\n${_dateFmt(item.time)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                ),
               ],
             ),
           ),
-          Text(_rp(item.amount),
-              style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(
+            _rp(item.amount),
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );
