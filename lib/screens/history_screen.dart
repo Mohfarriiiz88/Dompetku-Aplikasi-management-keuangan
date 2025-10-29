@@ -53,12 +53,14 @@ class _HistoryViewState extends State<_HistoryView> {
 
     return Scaffold(
       backgroundColor: AppColors.greySurface,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              child: Row(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
@@ -102,7 +104,11 @@ class _HistoryViewState extends State<_HistoryView> {
           ],
         ),
       ),
-      bottomNavigationBar: const AppFloatingNavBar(currentIndex: 1),
+      
+      // Floating navigation bar
+      const AppFloatingNavBar(currentIndex: 1),
+        ],
+      ),
     );
   }
 }

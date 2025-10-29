@@ -299,7 +299,7 @@ class _WalletCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            _rp(balance <= 0 ? 1000000 : balance),
+            _rp(balance),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 26,
@@ -384,14 +384,21 @@ class _QuickActions extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const TransactionFormScreen()),
             );
 
-            // when form returns true (saved), refresh transactions
+            // when form returns true (saved), refresh transactions and balance
             if (res == true) {
               try {
                 if (token != null) {
+                  // Refresh transactions
                   await Provider.of<HomeProvider>(
                     context,
                     listen: false,
                   ).fetchTransactions(token: token);
+
+                  // Reload profile to get updated balance
+                  await Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  ).loadProfile();
                 } else {
                   await Provider.of<HomeProvider>(
                     context,

@@ -170,6 +170,23 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update balance after new transaction
+  void updateBalance(int newBalance) {
+    if (_user != null) {
+      _user = AuthUser(
+        nama: _user!.nama,
+        email: _user!.email,
+        img: _user!.img,
+        balance: newBalance,
+        phone: _user!.phone,
+        gender: _user!.gender,
+        birthday: _user!.birthday,
+        status: _user!.status,
+      );
+      notifyListeners();
+    }
+  }
+
   /// Logout untuk menu Pengaturan.
   Future<void> logout() async {
     _token = null;
